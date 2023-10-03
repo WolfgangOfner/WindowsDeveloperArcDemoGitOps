@@ -1,0 +1,17 @@
+trigger: none
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'AzureServiceConnection'
+    scriptType: 'pscore'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      $KeyVaultName="ArcDemo-KeyVault"
+
+      # add your secrets here, value is taken from secret pipeline variable
+      az keyvault secret set --vault-name $KeyVaultName --name SecretValue --value "$(SecretValue)"
+  displayName: Write/Update secrets to key vault

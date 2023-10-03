@@ -1,0 +1,70 @@
+trigger:
+  none
+
+parameters:
+- name: tag
+  displayName: Container Tag
+  type: string
+  default: 0.0.0
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  Branch: master
+  ValuesFilePath: './WindowsDeveloperArcDemo/charts/windowsdeveloperarcdemo/values.yaml'
+  AzureSubscription: AzureServiceConnection
+  AcrName: windevacr
+  Repository: windowsdeveloperarcdemo
+
+steps:
+- checkout: self
+  persistCredentials: true
+
+- script: |
+   git config --global user.email deployment@arcdemo.com & git config --global user.name "Arc Demo Deployment"
+  workingDirectory: $(System.DefaultWorkingDirectory)
+  displayName: Configure Git user
+
+- script: |   
+   git checkout -b $(Branch)
+  displayName: Checkout $(Branch)
+  workingDirectory: $(System.DefaultWorkingDirectory)
+
+- ${{ if eq(parameters.tag, '0.0.0') }}:
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: $(AzureSubscription)
+      scriptType: 'pscore'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+          $tag =$(az acr repository show-tags --name $(AcrName) --repository $(Repository) --top 1 --orderby time_desc --detail --query [0].name)  -replace '"', ""
+          Write-Host "##vso[task.setvariable variable=Tag;]$tag"
+    displayName: "Read latest container tag"  
+
+- ${{ if ne(parameters.tag, '0.0.0') }}:
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: |
+        Write-Host "##vso[task.setvariable variable=Tag;]${{ parameters.tag }}"
+      pwsh: true
+    displayName: "Set tag from user input"
+
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      $file = '$(ValuesFilePath)'
+      $regex = 'tag: [0-9]+.[0-9]+.[0-9]+'
+      (Get-Content $file) -replace $regex, 'tag: $(Tag)' | Set-Content $file
+    pwsh: true
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+  displayName: "Replace tag in values file"
+
+- script: |
+    git add -A
+    git commit -m "Prepared $(Branch) for deployment"    
+    git push origin $(Branch)
+  displayName: Commit branch $(Branch)
+  workingDirectory: $(System.DefaultWorkingDirectory)
