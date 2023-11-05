@@ -19,6 +19,6 @@ spec:
         driver: secrets-store.csi.k8s.io
         readOnly: true
         volumeAttributes:
-          secretProviderClass: "kvsecretsprovider"
+          secretProviderClass: "arcdemo-keyvault"
         nodePublishSecretRef:                       
           name: secrets-store-creds

@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: windevacr.azurecr.io/windowsdeveloperarcdemo # replace with your repository or use wolfgangofner/windowsdeveloperarcdemo
   pullPolicy: Always
-  tag: 0.1.4
+  tag: 0.1.6
 
 imagePullSecrets: []
 nameOverride: ""
@@ -49,3 +49,9 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+keyvault:
+  secretvariable:
+    name: SecretValue
+    secretRefName: secretvalue
+    secretRefKey: secretvalue

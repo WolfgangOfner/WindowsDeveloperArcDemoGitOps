@@ -29,6 +29,10 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
+          volumeMounts:
+          - name: secrets-store-inline
+            mountPath: "/mnt/secrets-store"
+            readOnly: true
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -45,6 +49,14 @@ spec:
             httpGet:
               path: /healthz
               port: http
+          env:
+          {{- range $key, $value := .Values.keyvault }}
+          - name: {{ $value.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ $value.secretRefName }}
+                key: {{ $value.secretRefKey }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
@@ -59,3 +71,12 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "arcdemo-keyvault"
+            nodePublishSecretRef:                       
+              name: secrets-store-creds
